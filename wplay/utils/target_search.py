@@ -24,6 +24,7 @@ async def my_script(target):
 
 # region IMPORTS
 from wplay.utils.helpers import whatsapp_selectors_dict
+import asyncio
 # endregion
 
 
@@ -41,6 +42,7 @@ async def search_and_select_target(page, target, hide_groups=False):
         group_titles_unchecked, group_list_elements_unchecked)
     contact_tuple = __check_contact_list(target, contact_list_unchecked)
     group_tuple = __check_group_list(target, group_list_unchecked)
+    contact_tuple_list_with_number = await get_name_and_number_on_all_contacts(contact_tuple, page)
     target_tuple = __get_target_tuple(contact_tuple, group_tuple)
     __print_target_tuple(target_tuple)
     target_index_choosed = __ask_user_to_choose_the_filtered_target(target_tuple)
@@ -61,15 +63,53 @@ async def search_and_select_target(page, target, hide_groups=False):
 
 
 # region SEARCH AND SELECT TARGET
+
+async def get_name_and_number_on_all_contacts(contact_tuple_list,page):
+    loop = asyncio.get_event_loop()
+    contact_tuple_list_with_number = []
+    task = asyncio.create_task(get_target_number(contact_tuple_list[0],page,contact_tuple_list_with_number))
+    done, pending = await asyncio.wait({task})
+    for current_tuple in contact_tuple_list[1:]:
+        try:
+            while task in pending:
+                i = 0
+
+            task = asyncio.create_task(get_target_number(current_tuple,page,contact_tuple_list_with_number))
+            done, pending = await asyncio.wait({task})
+            #result = get_target_number(current_tuple,page,contact_tuple_list_with_number)
+            #loop.run_until_complete(get_target_number(current_tuple,page,contact_tuple_list_with_number))
+            #loop.run_until_complete( __navigate_to_target(page,current_tuple))
+            #current_tuple[1].click()
+            #task = asyncio.create_task(__navigate_to_target(page,current_tuple))
+            #done, pending = await asyncio.wait({task})
+            #if task in done:
+            # await open_target_contact_info_page(page)
+            # contact_page_elements = await get_contact_page_elements(page)
+            # number  = await contact_page_elements[3].querySelectorEval('div:last-of-type > div > div > span > span', 'element => element.innerText')
+            # contact_tuple_list_with_number.append((current_tuple[0] + ": " + number,current_tuple[1]))
+            # await close_contact_info_page(page)
+        except Exception as e:
+            print(e)
+    return contact_tuple_list_with_number
+
+
+async def get_target_number(target_tuple,page,contact_tuple_list_with_number):
+    try:
+        await __navigate_to_target(page, target_tuple)
+        await open_target_contact_info_page(page)
+        contact_page_elements = await get_contact_page_elements(page)
+        number = await contact_page_elements[3].querySelectorEval('div:last-of-type > div > div > span > span',
+                                                              'element => element.innerText')
+        contact_tuple_list_with_number.append((target_tuple[0] + ": " + number, target_tuple[1]))
+        await close_contact_info_page(page)
+    except Exception as e:
+        print(e)
+
+
 async def get_complete_info_on_target(page):
     contact_page_elements = []
     try:
-        await page.waitForSelector(
-            whatsapp_selectors_dict['target_chat_header'],
-            visible=True,
-            timeout=3000
-        )
-        await page.click(whatsapp_selectors_dict['target_chat_header'])
+        await open_target_contact_info_page(page)
         contact_page_elements = await get_contact_page_elements(page)
         complete_target_info = {}
         await get_contact_name_info(contact_page_elements[0], complete_target_info)
@@ -78,6 +118,18 @@ async def get_complete_info_on_target(page):
     except Exception as e:
         print(e)
     return complete_target_info
+
+
+async def open_target_contact_info_page(page):
+    try:
+        await page.waitForSelector(
+            whatsapp_selectors_dict['target_chat_header'],
+            visible=True,
+            timeout=3000
+        )
+        await page.click(whatsapp_selectors_dict['target_chat_header'])
+    except Exception as e:
+        print(e)
 
 
 async def get_contact_page_elements(page):
