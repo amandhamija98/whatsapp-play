@@ -55,12 +55,17 @@ async def search_and_select_target(page, target, hide_groups=False):
     choosed_target = __get_choosed_target(target_tuple, target_index_choosed)
     await __navigate_to_target(page, choosed_target)
     target_focused_title = await __get_focused_target_title(page, target)
+    complete_target_info = {}
     if any(choosed_target[0] in i for i in contact_tuple):
         complete_target_info = await __get_complete_info_on_target(page)
         __print_complete_target_info(complete_target_info)
         await __close_contact_info_page(page)
     else:
-        __print_selected_target_title(target_focused_title)
+        # __print_selected_target_title(target_focused_title)
+        complete_target_info = await __get_complete_info_on_group(page)
+        __print_complete_target_info(complete_target_info)
+        await __close_contact_info_page(page)
+
     __check_target_focused_title(page, target, target_focused_title)
     await __wait_for_message_area(page)
     return target_focused_title
@@ -181,6 +186,25 @@ async def __get_complete_info_on_target(page):
         await __get_contact_about_and_phone(contact_page_elements[3], complete_target_info)
         await __get_contact_groups_common_with_target(complete_target_info, page)
         return complete_target_info
+    except Exception as e:
+        print(e)
+
+
+async def __get_complete_info_on_group(page):
+    try:
+        await __open_target_chat_info_page(page)
+        contact_page_elements = await __get_contact_page_elements(page)
+        complete_target_group_info = {}
+        return complete_target_group_info
+    except Exception as e:
+        print(e)
+
+
+async def __get_target_group_name(element, complete_target_info):
+    try:
+        get_innerText_function = 'e => e.innerText'
+        complete_target_info['Name']= await element.querySelectorEval\
+            (whatsapp_selectors_dict['contact_info_page_target_group_name_element'],get_innerText_function)
     except Exception as e:
         print(e)
 
